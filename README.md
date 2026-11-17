@@ -11,6 +11,6 @@ usa APPUNTI.md e DA_APPROFONDIRE.md su richiesta dell'utente
 ## Esempi di chiamata API al playground
 
 ```bash
-export HT_TOKEN=[hf-token]
+export HF_TOKEN=[hf-token]
 uv run clef_playground.py --state "A user shared this mobile phone screenshot." --questions questions/platform_choice.json --image resources/phone-screenshot.png
 ```

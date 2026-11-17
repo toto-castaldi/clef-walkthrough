@@ -116,3 +116,9 @@ Question
   }
 }
 ```
+
+## Jev/SystemOne API
+
+Esiste uno standard per le decision API POST  **/v1/systemone**
+
+Le prove fatte con HF hanno endpoint diversi
