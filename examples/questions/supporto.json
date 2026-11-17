@@ -1,0 +1,20 @@
+{
+  "urgent": {
+    "type": "noul",
+    "instructions": "Is this support request urgent?"
+  },
+  "team": {
+    "type": "choice",
+    "instructions": "Which team should handle this request?",
+    "criteria": {
+      "billing": "Payments, invoices, refunds",
+      "technical": "Bugs, errors, outages",
+      "sales": "Pricing, plans, new purchases"
+    }
+  },
+  "severity": {
+    "type": "score",
+    "instructions": "How severe is the customer impact?",
+    "criteria": ["No impact", "Minor", "Major", "Critical"]
+  }
+}

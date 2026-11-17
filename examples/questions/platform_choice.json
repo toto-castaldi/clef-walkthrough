@@ -1,0 +1,10 @@
+{
+  "platform": {
+    "type": "choice",
+    "instructions": "Which mobile operating system is shown in this screenshot?",
+    "criteria": {
+      "android": "Android UI: Material status bar, Android navigation bar or gesture pill, Google apps",
+      "iphone": "iOS UI: Dynamic Island or notch, iOS status bar icons, home indicator, Apple apps"
+    }
+  }
+}

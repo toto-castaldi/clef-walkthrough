@@ -1,0 +1,10 @@
+{
+  "is_iphone": {
+    "type": "noul",
+    "instructions": "Is this a screenshot of an iPhone (iOS) screen? Look for iOS cues such as the Dynamic Island or notch, iOS status bar icons, the home indicator and Apple apps."
+  },
+  "is_android": {
+    "type": "noul",
+    "instructions": "Is this a screenshot of an Android screen? Look for Android cues such as the Material status bar, the Android navigation bar or gesture pill and Google apps."
+  }
+}

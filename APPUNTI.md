@@ -80,3 +80,39 @@ SystemOne non è un modello. È il protocollo, cioè le regole con cui un progra
 - si fa una richiesta `POST` all'indirizzo `/v1/systemone`;
 - il body della richiesta contiene `state` e `questions`. Non c'è un elenco di `messages` come nelle chat, e infatti non è compatibile con l'API di OpenAI;
 - la risposta contiene `answers` (con le chiavi che hai scelto tu per le domande) e `usage`.
+
+## Chiamata di esempio
+
+State
+
+```text
+A user shared this mobile phone screenshot.
+```
+
+Question
+
+```json
+{
+  "platform": {
+    "type": "choice",
+    "instructions": "Which mobile operating system is shown in this screenshot?",
+    "criteria": {
+      "android": "Android UI: Material status bar, Android navigation bar or gesture pill, Google apps",
+      "iphone": "iOS UI: Dynamic Island or notch, iOS status bar icons, home indicator, Apple apps"
+    }
+  }
+}
+```
+
+```json
+{
+  "is_iphone": {
+    "type": "noul",
+    "instructions": "Is this a screenshot of an iPhone (iOS) screen?"
+  },
+  "is_android": {
+    "type": "noul",
+    "instructions": "Is this a screenshot of an Android phone screen? "
+  }
+}
+```
