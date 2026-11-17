@@ -1,6 +1,69 @@
-# Appunti Clef
+# Appunti
 
-Appunti personali per lo studio del modello [Cloudflare/clef](https://huggingface.co/Cloudflare/clef).
+## Panoramica Clef
+
+### Cos'è Clef
+
+Clef è un **"decision model"** multimodale da **27B parametri**. Riceve due cose:
+
+1. uno **stato**, cioè la situazione da valutare: testo, JSON, immagini o video;
+2. uno **schema di domande tipizzate**.
+
+Restituisce una **probabilità per ogni opzione ammessa di ogni domanda**, tutto in un **solo forward pass**.
+Non genera testo libero, quindi non c'è output da interpretare con un parser.
+
+In pratica: un LLM classico "scrive" una risposta, che poi va interpretata. Clef invece
+**assegna un punteggio a un insieme chiuso di opzioni** e produce subito una distribuzione di probabilità.
+
+Fa parte della collezione open-weight **Clef**, insieme alla variante più piccola e veloce
+[**Clef-Flash**](https://huggingface.co/Cloudflare/clef-flash): 9B parametri, ottenuta con un post-training di Qwen/Qwen3.5-9B.
+
+### Architettura
+
+| Componente | Descrizione |
+|---|---|
+| **Backbone** | [Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B), compreso il suo vision encoder. Clef è un *post-training* di questo modello. |
+| **Joint schema head** | Un piccolo transformer posto sopra gli hidden state finali del backbone. Instrada le informazioni dello stato verso ogni domanda e assegna un punteggio a tutte le opzioni di tutte le domande **insieme** (*jointly*). |
+| **Output** | Un logit per ogni opzione di ogni domanda. Una softmax **per domanda** trasforma i logit in probabilità. |
+
+- Pesi in formato **BF16**, file **safetensors** suddivisi in più parti (*sharded*).
+- La card cita il tag `qwen3_5`, ma dichiara come base Qwen3.8: è un'incongruenza da tenere presente.
+
+### Formato di input
+
+Un "record" contiene questi campi:
+
+| Campo | Significato |
+|---|---|
+| `state` | Stringa o valore JSON che descrive la situazione. |
+| `images`, `videos` | Opzionali: liste di immagini o di array di frame video. |
+| `media_kwargs` | Opzionale: parametri per il processor di immagini e video. |
+| `questions` | Mappa *ID domanda → domanda*. |
+
+Ogni domanda ha:
+
+- **`type`**, uno fra:
+  - `noul`: vero/falso;
+  - `choice`: opzioni con un nome;
+  - `score`: opzioni ordinate, cioè una scala.
+- **`instructions`** (opzionale): se manca, il modello usa l'ID della domanda.
+- **`criteria`**: dipende dal tipo.
+  - `choice`: mappa *ID opzione → descrizione*;
+  - `score`: lista di descrizioni, indicizzata da 0;
+  - `noul`: descrizioni opzionali per *true* e *false*.
+
+Limiti di lunghezza: `max_length` vale 16.384 token di default; `max_state_tokens` limita la parte dedicata allo stato.
+
+### Formato di output
+
+La risposta, in stile Jev/SystemOne, contiene `model`, `answers` (indicizzato per ID domanda) e `usage`.
+Il contenuto di ogni risposta dipende dal tipo di domanda:
+
+| Tipo | Contenuto della risposta |
+|---|---|
+| `choice` | `choice` (l'opzione scelta), `confidence`, `probabilities` |
+| `score` | `score` (valore atteso), `confidence`, `legend`, `probabilities` |
+| `noul` | probabilità di *true* |
 
 ## Parametri
 
@@ -17,43 +80,3 @@ SystemOne non è un modello. È il protocollo, cioè le regole con cui un progra
 - si fa una richiesta `POST` all'indirizzo `/v1/systemone`;
 - il body della richiesta contiene `state` e `questions`. Non c'è un elenco di `messages` come nelle chat, e infatti non è compatibile con l'API di OpenAI;
 - la risposta contiene `answers` (con le chiavi che hai scelto tu per le domande) e `usage`.
-
-## Prove sullo Space
-
-Space: https://huggingface.co/spaces/hugging-apps/clef-decision-model (Clef 27B, su ZeroGPU)
-
-### Prova 1 — "È un telefono Android?" (2026-11-16)
-
-**Input**
-
-- State: `this is a screenshot`
-- Immagine: screenshot della home di un telefono (barra di ricerca Google, icone delle app, sfondo con un pontile sul mare)
-- Domanda:
-  - ID: `market`
-  - type: `choice`
-  - instructions: "Is it and Android phone?"
-  - criteria: `yes` → "yes", `no` → "no"
-
-**Output**
-
-- Scelta: `yes`, con probabilità 99,6% (`no` 0,4%)
-- 580 token di input · forward pass 2506 ms
-
-**Osservazioni**
-
-- La risposta è corretta: la schermata ha l'aspetto di Android.
-- **Tipo di domanda**: per un sì/no esiste il tipo `noul`. `choice` è più utile quando le opzioni sono più di due.
-- **ID della domanda**: senza `instructions`, il modello usa l'ID come testo della domanda, quindi l'ID ha un significato anche per il modello. `market` non descrive la domanda; un nome come `is_android` è più chiaro.
-- **Refuso**: "and" invece di "an". Il modello ha capito lo stesso.
-- **Token**: quasi tutti i 580 token vengono dall'immagine. Il vision encoder la trasforma in token che occupano spazio nel contesto, come se fossero parole.
-- **Latenza**: 2,5 s, contro i circa 209 ms di latenza mediana dichiarati nella card. La differenza dipende probabilmente da ZeroGPU, che assegna la GPU al momento, e dall'immagine.
-
-**Prossime prove**
-
-- [ ] Rifare la stessa domanda come `noul` e confrontare risposta e probabilità
-- [ ] Rinominare la domanda (`is_android`) e correggere il refuso: cambia qualcosa?
-- [ ] Rilanciare senza immagine: quanto scendono i token?
-- [ ] Rilanciare due volte di fila: la seconda è più veloce?
-- [ ] Aprire il pannello "SystemOne JSON response" e confrontarlo con la sezione SystemOne di questi appunti
-- [ ] `choice` sulla marca del telefono, con 4–5 opzioni: le probabilità si distribuiscono?
-- [ ] `score` da 0 a 4 su quanto è "ordinata" la schermata, con una descrizione per ogni livello
